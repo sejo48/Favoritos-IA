@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IA HUB Pro - Jorge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js" type="module"></script>
+    
+    <style>
+        body {
+            background-color: #020617;
+            color: #f1f5f9;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+        .glass-card {
+            background: rgba(15, 23, 42, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .glass-card:hover {
+            transform: translateY(-8px);
+            border-color: #0ea5e9;
+            box-shadow: 0 20px 30px -10px rgba(14, 165, 233, 0.2);
+        }
+        .fav-glow {
+            border: 1px solid rgba(234, 179, 8, 0.4) !important;
+        }
+        .loader {
+            border: 3px solid #1e293b;
+            border-radius: 50%;
+            border-top: 3px solid #0ea5e9;
+            width: 28px;
+            height: 28px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="p-4 md:p-10 min-h-screen">
+
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-12">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-sky-500 rounded-2xl flex items-center justify-center shadow-lg shadow-sky-500/20">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="text-white" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 10 10H12V2Z"/><path d="M12 2a10 10 0 0 1 10 10h-10V2Z"/><path d="M12 12L2.69 15.5"/><path d="M12 12l8 4.5"/><path d="M12 12l-8-4.5"/><path d="M12 12V21"/></svg>
+                        </div>
+                        <h1 class="text-4xl font-black text-white tracking-tighter uppercase">IA <span class="text-sky-500">HUB</span></h1>
+                    </div>
+                    <p class="text-slate-400 font-medium italic">Hola Jorge, he registrado todas las herramientas principales para ti.</p>
+                </div>
+                
+                <div class="flex items-center gap-3">
+                    <div id="authStatus" class="hidden flex items-center gap-2 px-4 py-2.5 bg-slate-900/50 rounded-2xl border border-slate-800 text-xs font-bold text-sky-400">
+                        <div class="w-2 h-2 rounded-full bg-sky-500 animate-pulse"></div>
+                        CLOUD SYNC
+                    </div>
+                    <button onclick="toggleModal('addModal', true)" class="px-6 py-4 bg-sky-600 hover:bg-sky-500 text-white rounded-2xl transition-all shadow-xl shadow-sky-900/40 font-black flex items-center gap-2 uppercase text-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        Añadir
+                    </button>
+                </div>
+            </div>
+
+            <div class="mt-10 flex flex-col lg:flex-row gap-4">
+                <div class="relative flex-1 group">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </span>
+                    <input type="text" id="searchInput" placeholder="¿Qué herramienta buscas hoy?" class="w-full bg-slate-900/80 border border-slate-800 rounded-2xl py-4 pl-12 pr-4 focus:ring-2 focus:ring-sky-500 outline-none transition text-white font-medium">
+                </div>
+                <div class="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                    <button data-cat="Todas" class="cat-btn px-6 py-3 bg-sky-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap">Todas</button>
+                    <button data-cat="Favoritos" class="cat-btn px-6 py-3 bg-slate-900 text-slate-400 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap">⭐ Favoritos</button>
+                    <button data-cat="Texto" class="cat-btn px-6 py-3 bg-slate-900 text-slate-400 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap">Texto</button>
+                    <button data-cat="Imagen" class="cat-btn px-6 py-3 bg-slate-900 text-slate-400 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap">Imagen</button>
+                    <button data-cat="Video" class="cat-btn px-6 py-3 bg-slate-900 text-slate-400 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap">Video</button>
+                    <button data-cat="Productividad" class="cat-btn px-6 py-3 bg-slate-900 text-slate-400 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap">Productividad</button>
+                    <button data-cat="Audio" class="cat-btn px-6 py-3 bg-slate-900 text-slate-400 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap">Audio</button>
+                    <button data-cat="Código" class="cat-btn px-6 py-3 bg-slate-900 text-slate-400 rounded-2xl text-xs font-black uppercase tracking-widest whitespace-nowrap">Código</button>
+                </div>
+            </div>
+        </header>
+
+        <div id="initialLoader" class="flex flex-col items-center justify-center py-32 gap-4">
+            <div class="loader"></div>
+            <p class="text-slate-500 font-bold uppercase tracking-widest text-xs">Cargando base de datos completa...</p>
+        </div>
+
+        <div id="ai-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-20"></div>
+    </div>
+
+    <!-- Modal -->
+    <div id="addModal" class="fixed inset-0 bg-black/90 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-slate-950 p-8 rounded-[3rem] w-full max-w-md border border-slate-800 shadow-2xl">
+            <h2 class="text-2xl font-black mb-8 text-white text-center uppercase tracking-tighter">Nueva Herramienta</h2>
+            <div class="space-y-4">
+                <input type="text" id="aiName" placeholder="Nombre" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-white outline-none focus:border-sky-500">
+                <input type="text" id="aiUrl" placeholder="URL" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-white outline-none focus:border-sky-500">
+                <input type="text" id="aiNote" placeholder="Uso (ej. Redacción, Logos...)" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-white outline-none focus:border-sky-500">
+                <select id="aiCategory" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-white outline-none focus:border-sky-500 appearance-none">
+                    <option value="Texto">Texto / Chat</option>
+                    <option value="Imagen">Imagen / Arte</option>
+                    <option value="Video">Video / Animación</option>
+                    <option value="Audio">Audio / Voz</option>
+                    <option value="Productividad">Productividad</option>
+                    <option value="Código">Código / Dev</option>
+                </select>
+                <div class="flex gap-3 pt-6">
+                    <button onclick="toggleModal('addModal', false)" class="flex-1 py-4 bg-slate-900 rounded-2xl text-slate-500 font-black uppercase text-xs">Cerrar</button>
+                    <button onclick="saveAI()" class="flex-1 py-4 bg-sky-600 rounded-2xl text-white font-black uppercase text-xs shadow-lg shadow-sky-900/30">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, doc, deleteDoc, onSnapshot, getDocs, addDoc, updateDoc } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'ia-hub-jorge-v-final';
+
+        let user = null;
+        let myIAs = [];
+        let searchQuery = '';
+        let currentFilter = 'Todas';
+
+        const registry = [
+            // TEXTO
+            { name: 'ChatGPT', url: 'https://chat.openai.com', category: 'Texto', note: 'El estándar de oro en chat', favorite: true },
+            { name: 'Claude', url: 'https://claude.ai', category: 'Texto', note: 'Excelente redacción y análisis', favorite: true },
+            { name: 'Gemini', url: 'https://gemini.google.com', category: 'Texto', note: 'La IA conectada de Google', favorite: true },
+            { name: 'Perplexity', url: 'https://www.perplexity.ai', category: 'Texto', note: 'Buscador con fuentes reales', favorite: true },
+            { name: 'DeepSeek', url: 'https://chat.deepseek.com', category: 'Texto', note: 'Potente para lógica y matemáticas', favorite: false },
+            { name: 'Mistral', url: 'https://chat.mistral.ai', category: 'Texto', note: 'IA europea eficiente', favorite: false },
+            // IMAGEN
+            { name: 'Midjourney', url: 'https://www.midjourney.com', category: 'Imagen', note: 'Arte visual de alta fidelidad', favorite: true },
+            { name: 'Leonardo.ai', url: 'https://leonardo.ai', category: 'Imagen', note: 'Control creativo sobre imágenes', favorite: true },
+            { name: 'Canva Magic', url: 'https://www.canva.com', category: 'Imagen', note: 'Diseño asistido', favorite: true },
+            { name: 'Adobe Firefly', url: 'https://firefly.adobe.com', category: 'Imagen', note: 'IA ética para diseño', favorite: false },
+            { name: 'DALL-E 3', url: 'https://openai.com/dall-e-3', category: 'Imagen', note: 'Integrado en ChatGPT', favorite: false },
+            // VIDEO
+            { name: 'Luma Dream Machine', url: 'https://lumalabs.ai/dream-machine', category: 'Video', note: 'Generación de clips realistas', favorite: true },
+            { name: 'Runway Gen-3', url: 'https://runwayml.com', category: 'Video', note: 'Edición y creación profesional', favorite: true },
+            { name: 'HeyGen', url: 'https://www.heygen.com', category: 'Video', note: 'Avatares de video realistas', favorite: false },
+            { name: 'Pika Art', url: 'https://pika.art', category: 'Video', note: 'Animación creativa', favorite: false },
+            // AUDIO
+            { name: 'ElevenLabs', url: 'https://elevenlabs.io', category: 'Audio', note: 'Síntesis de voz perfecta', favorite: true },
+            { name: 'Suno AI', url: 'https://suno.com', category: 'Audio', note: 'Crea canciones desde cero', favorite: true },
+            { name: 'Udio', url: 'https://www.udio.com', category: 'Audio', note: 'Generación musical de alta calidad', favorite: false },
+            // PRODUCTIVIDAD
+            { name: 'Notion AI', url: 'https://www.notion.so', category: 'Productividad', note: 'Notas inteligentes', favorite: true },
+            { name: 'Gamma', url: 'https://gamma.app', category: 'Productividad', note: 'Presentaciones rápidas', favorite: true },
+            { name: 'Otter.ai', url: 'https://otter.ai', category: 'Productividad', note: 'Transcripción de voz', favorite: false },
+            { name: 'Remove.bg', url: 'https://www.remove.bg', category: 'Productividad', note: 'Quitar fondos', favorite: false },
+            // CÓDIGO
+            { name: 'v0.dev', url: 'https://v0.dev', category: 'Código', note: 'Interfaces React con IA', favorite: true },
+            { name: 'Cursor', url: 'https://www.cursor.com', category: 'Código', note: 'Editor de código inteligente', favorite: true },
+            { name: 'GitHub Copilot', url: 'https://github.com/features/copilot', category: 'Código', note: 'Programación asistida', favorite: false }
+        ];
+
+        async function seedDatabase(uid) {
+            const col = collection(db, 'artifacts', appId, 'users', uid, 'tools');
+            const snap = await getDocs(col);
+            if (snap.empty) {
+                for (const item of registry) {
+                    await addDoc(col, { ...item, createdAt: Date.now() });
+                }
+            }
+        }
+
+        onAuthStateChanged(auth, async (u) => {
+            if (u) {
+                user = u;
+                document.getElementById('authStatus').classList.remove('hidden');
+                await seedDatabase(user.uid);
+                listen();
+            } else {
+                signInAnonymously(auth);
+            }
+        });
+
+        function listen() {
+            onSnapshot(collection(db, 'artifacts', appId, 'users', user.uid, 'tools'), (snap) => {
+                myIAs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                render();
+                document.getElementById('initialLoader').classList.add('hidden');
+            }, (err) => console.error(err));
+        }
+
+        window.render = () => {
+            const grid = document.getElementById('ai-grid');
+            grid.innerHTML = '';
+            
+            let filtered = myIAs.filter(ia => {
+                const text = (ia.name + ia.category + (ia.note || '')).toLowerCase();
+                const matchesSearch = text.includes(searchQuery.toLowerCase());
+                const matchesCat = currentFilter === 'Todas' || (currentFilter === 'Favoritos' && ia.favorite) || ia.category === currentFilter;
+                return matchesSearch && matchesCat;
+            });
+
+            filtered.sort((a, b) => b.favorite - a.favorite || a.name.localeCompare(b.name));
+
+            filtered.forEach(ia => {
+                const card = document.createElement('div');
+                card.className = `glass-card p-6 rounded-[2.5rem] flex flex-col ${ia.favorite ? 'fav-glow border-yellow-500/30' : ''}`;
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-6">
+                        <div class="w-14 h-14 rounded-2xl bg-slate-950 flex items-center justify-center p-2.5 shadow-inner">
+                            <img src="https://www.google.com/s2/favicons?domain=${new URL(ia.url).hostname}&sz=128" 
+                                 onerror="this.src='https://cdn-icons-png.flaticon.com/512/2103/2103832.png'" class="w-full h-full object-contain">
+                        </div>
+                        <button onclick="toggleFav('${ia.id}', ${ia.favorite})" class="p-2.5 hover:scale-110 transition-transform">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="${ia.favorite ? '#eab308' : 'none'}" stroke="${ia.favorite ? '#eab308' : '#334155'}" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                        </button>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="px-2 py-0.5 bg-sky-500/10 text-sky-400 text-[10px] font-black uppercase tracking-wider rounded-md">${ia.category}</span>
+                        </div>
+                        <h3 class="text-xl font-black text-white leading-tight mb-2">${ia.name}</h3>
+                        <p class="text-slate-500 text-sm leading-relaxed line-clamp-2 italic">"${ia.note || 'Sin descripción'}"</p>
+                    </div>
+                    <div class="mt-8 flex gap-2">
+                        <a href="${ia.url}" target="_blank" class="flex-1 py-4 bg-white text-slate-950 text-center rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-sky-400 transition-colors">Abrir</a>
+                        <button onclick="delIA('${ia.id}')" class="px-4 bg-slate-900/50 text-slate-700 hover:text-red-500 rounded-2xl transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </button>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        };
+
+        window.toggleFav = async (id, cur) => await updateDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'tools', id), { favorite: !cur });
+        window.delIA = async (id) => await deleteDoc(doc(db, 'artifacts', appId, 'users', user.uid, 'tools', id));
+        
+        window.saveAI = async () => {
+            const name = document.getElementById('aiName').value;
+            const url = document.getElementById('aiUrl').value;
+            const note = document.getElementById('aiNote').value;
+            const category = document.getElementById('aiCategory').value;
+            if (!name || !url) return;
+            const fixedUrl = url.startsWith('http') ? url : `https://${url}`;
+            await addDoc(collection(db, 'artifacts', appId, 'users', user.uid, 'tools'), { name, url: fixedUrl, note, category, favorite: false, createdAt: Date.now() });
+            toggleModal('addModal', false);
+            ['aiName', 'aiUrl', 'aiNote'].forEach(id => document.getElementById(id).value = '');
+        };
+
+        window.toggleModal = (id, show) => {
+            const el = document.getElementById(id);
+            el.classList.toggle('hidden', !show);
+            el.classList.toggle('flex', show);
+        };
+
+        document.getElementById('searchInput').addEventListener('input', (e) => { searchQuery = e.target.value; render(); });
+
+        document.querySelectorAll('.cat-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                currentFilter = e.target.getAttribute('data-cat');
+                document.querySelectorAll('.cat-btn').forEach(b => {
+                    b.classList.replace('bg-sky-600', 'bg-slate-900');
+                    b.classList.replace('text-white', 'text-slate-400');
+                });
+                e.target.classList.replace('bg-slate-900', 'bg-sky-600');
+                e.target.classList.replace('text-slate-400', 'text-white');
+                render();
+            });
+        });
+    </script>
+</body>
+</html>
